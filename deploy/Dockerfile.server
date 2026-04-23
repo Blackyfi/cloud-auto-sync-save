@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1.7
+
+FROM golang:1.22-alpine AS build
+WORKDIR /src
+
+# Copy module files first for cached dep download. go.sum may not yet exist
+# on a fresh checkout — `go mod download` will create it from go.mod.
+COPY go.mod ./
+COPY go.sum* ./
+RUN go mod download
+
+COPY server ./server
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/cass-server ./server/cmd/cass-server
+
+FROM alpine:3.19
+RUN adduser -D -u 1000 cass \
+ && mkdir -p /var/cass \
+ && chown cass:cass /var/cass
+COPY --from=build /out/cass-server /usr/local/bin/cass-server
+USER cass
+ENV CASS_DATA_DIR=/var/cass \
+    CASS_LISTEN=0.0.0.0:8443
+EXPOSE 8443
+ENTRYPOINT ["/usr/local/bin/cass-server"]

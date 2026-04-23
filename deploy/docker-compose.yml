@@ -1,0 +1,17 @@
+services:
+  cass-server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.server
+    image: cass-server:latest
+    container_name: cass-server
+    restart: unless-stopped
+    ports:
+      - "8443:8443"
+    volumes:
+      - cass-data:/var/cass
+    environment:
+      - CASS_LISTEN=0.0.0.0:8443
+
+volumes:
+  cass-data:
